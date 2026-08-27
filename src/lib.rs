@@ -184,7 +184,11 @@ impl Converter {
                 .map(|entry| {
                     Ok(match entry {
                         ArcEntry::File(name, data) => {
-                            let data = self.convert_image(data)?;
+                            let data = self.convert_image(data).inspect_err(|e| {
+                                if !self.quiet {
+                                    println!("error: {} in file {}", e, name);
+                                }
+                            })?;
                             if let Some(stream) = status_stream.clone() {
                                 stream.lock().unwrap().write_all(b"plus")?
                             }
@@ -372,7 +376,12 @@ impl Converter {
                         let rgb = img.as_flat_samples();
                         self.encode_avif_rgb8(img.width(), img.height(), rgb.as_slice())?.to_vec()
                     }
-                    _ => return Err(ConvError::AvifError(libavif::Error::UnsupportedImageType)),
+                    _ => {
+                        // Need to (expensively!) convert to rgb8 for libavif :(
+                        let img = image.to_rgb8();
+                        let rgb = img.as_flat_samples();
+                        self.encode_avif_rgb8(image.width(), image.height(), rgb.as_slice())?.to_vec()
+                    }
                 }
             }
             Format::Webp => image.write_with_encoder(WebPEncoder::new_lossless(&mut data))?,

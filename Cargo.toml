@@ -17,6 +17,7 @@ image = { version = "0.25.1", default-features = false, features = [
   "png",
   "webp",
   "jpeg",
+  "gif",
 ] }
 indicatif = "0.17.7"
 libavif-image = "0.14.0"
