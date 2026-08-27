@@ -28,6 +28,7 @@ jxl-oxide = { version = "0.10.0", features = ["image"] }
 infer = "0.16.0"
 zune-jpegxl = "0.4.0"
 zune-core = "0.4.12"
+libavif = "0.14.0"
 
 [lib]
 path = "src/lib.rs"

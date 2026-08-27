@@ -14,7 +14,8 @@ use image::{
 use indicatif::{style::TemplateError, ProgressBar, ProgressStyle};
 use infer::image::is_jxl;
 use jxl_oxide::integration::JxlDecoder;
-use libavif_image::{is_avif, read as read_avif, save as save_avif, Error as AvifError};
+use libavif_image::{is_avif, read as read_avif, Error as AvifError};
+use libavif::{AvifImage, Encoder as AvifEncoder};
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 use sha2::{Digest, Sha256};
 use std::{
@@ -331,6 +332,20 @@ impl Converter {
         Ok(data)
     }
 
+    fn encode_avif_rgb8(self, width: u32, height: u32, rgb: &[u8]) -> Result<libavif::AvifData<'static>, libavif::Error> {
+        let image = if (width * height) as usize == rgb.len() {
+            AvifImage::from_luma8(width, height, rgb)?
+        } else {
+            let rgb = libavif::RgbPixels::new(width, height, rgb)?;
+            rgb.to_image(libavif::YuvFormat::Yuv444)
+        };
+
+        let mut encoder = AvifEncoder::new();
+        encoder.set_speed(self.speed);
+        encoder.set_quality(self.quality);
+        encoder.encode(&image)
+    }
+
     fn convert_image(self, buf: &[u8]) -> ConvResult<Vec<u8>> {
         let image = if is_avif(buf) {
             read_avif(buf)?
@@ -344,7 +359,21 @@ impl Converter {
         let mut data = Vec::new();
         match self.format {
             Format::Avif => {
-                data = save_avif(&image)?.to_vec();
+                data = match image {
+                    DynamicImage::ImageRgb8(img) => {
+                        let rgb = img.as_flat_samples();
+                        self.encode_avif_rgb8(img.width(), img.height(), rgb.as_slice())?.to_vec()
+                    }
+                    DynamicImage::ImageRgba8(img) => {
+                        let rgb = img.as_flat_samples();
+                        self.encode_avif_rgb8(img.width(), img.height(), rgb.as_slice())?.to_vec()
+                    }
+                    DynamicImage::ImageLuma8(img) => {
+                        let rgb = img.as_flat_samples();
+                        self.encode_avif_rgb8(img.width(), img.height(), rgb.as_slice())?.to_vec()
+                    }
+                    _ => return Err(ConvError::AvifError(libavif::Error::UnsupportedImageType)),
+                }
             }
             Format::Webp => image.write_with_encoder(WebPEncoder::new_lossless(&mut data))?,
             Format::Png => image.write_with_encoder(PngEncoder::new_with_quality(
