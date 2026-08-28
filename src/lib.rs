@@ -4,12 +4,11 @@
 
 use cra::{ArcEntry, ArcError, ArcReader, ArcWriter};
 use image::{
-    codecs::{
+    ColorType, DynamicImage, ImageError, ImageReader, codecs::{
         jpeg::JpegEncoder,
-        png::{CompressionType, FilterType, PngEncoder},
+        png::{self, CompressionType, PngEncoder},
         webp::WebPEncoder,
-    },
-    ColorType, DynamicImage, ImageError, ImageReader,
+    }, imageops::{FilterType},
 };
 use indicatif::{style::TemplateError, ProgressBar, ProgressStyle};
 use infer::image::is_jxl;
@@ -96,6 +95,7 @@ pub struct Converter {
     pub format: Format,
     pub backup: bool,
     pub quiet: bool,
+    pub max_width: Option<u32>,
 }
 
 impl Default for Converter {
@@ -106,6 +106,7 @@ impl Default for Converter {
             format: Format::Avif,
             backup: false,
             quiet: false,
+            max_width: None
         }
     }
 }
@@ -185,9 +186,7 @@ impl Converter {
                     Ok(match entry {
                         ArcEntry::File(name, data) => {
                             let data = self.convert_image(data).inspect_err(|e| {
-                                if !self.quiet {
-                                    println!("error: {} in file {}", e, name);
-                                }
+                                eprintln!("error: {} in file {}", e, name);
                             })?;
                             if let Some(stream) = status_stream.clone() {
                                 stream.lock().unwrap().write_all(b"plus")?
@@ -351,7 +350,7 @@ impl Converter {
     }
 
     fn convert_image(self, buf: &[u8]) -> ConvResult<Vec<u8>> {
-        let image = if is_avif(buf) {
+        let base_image = if is_avif(buf) {
             read_avif(buf)?
         } else if is_jxl(buf) {
             DynamicImage::from_decoder(JxlDecoder::new(buf)?)?
@@ -360,6 +359,16 @@ impl Converter {
                 .with_guessed_format()?
                 .decode()?
         };
+        let image = if let Some(max_width) = self.max_width {
+            if base_image.width() < base_image.height() && base_image.width() > max_width {
+                base_image.resize(max_width, u32::MAX, FilterType::Lanczos3)
+            } else {
+                base_image
+            }
+        } else {
+            base_image
+        };
+
         let mut data = Vec::new();
         match self.format {
             Format::Avif => {
@@ -393,7 +402,7 @@ impl Converter {
                     2 => CompressionType::Best,
                     _ => unreachable!(),
                 },
-                FilterType::Adaptive,
+                png::FilterType::Adaptive,
             ))?,
             Format::Jpeg => image
                 .into_rgb8()

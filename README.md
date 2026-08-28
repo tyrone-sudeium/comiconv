@@ -29,6 +29,7 @@ Options:
   -s, --speed <VALUE>     Set speed: 0 (Slowest) - 10 (Fastest) (0-2 for png)
   -q, --quality <VALUE>   Set quality 0 (Worst) - 100 (Best) (ignored for webp, it's always lossless)
   -f, --format <VALUE>    Set format (avif, webp, jpeg, jxl, png)
+  -w, --max-width <VALUE> Resizes (portrait only) images above this. Square/landscape images are never resized
       --quiet             Suppress progress messages
       --backup            Keep backup of original file
       --server <ADDRESS>  Server for online conversion

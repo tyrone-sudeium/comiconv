@@ -1,4 +1,4 @@
-use clap::{arg, command, value_parser, ArgAction};
+use clap::{arg, command, value_parser, Arg, ArgAction};
 use std::{
     io::Write,
     net::{Shutdown, TcpStream},
@@ -22,6 +22,14 @@ fn main() {
             arg!(-f --format <VALUE>"Set format (avif, webp, jpeg, jxl, png)")
                 .required(false)
                 .value_parser(value_parser!(String)),
+        )
+        .arg(Arg::new("max-width") // Using Arg::new instead of arg! because the macro seems to eat shit with a - in the name
+            .short('w')
+            .long("max-width")
+            .required(false)
+            .value_name("VALUE")
+            .value_parser(value_parser!(u32))
+            .help("Resizes (portrait only) images above this. Square/landscape images are never resized")
         )
         .arg(arg!(--quiet "Suppress progress messages").required(false))
         .arg(arg!(--backup "Keep backup of original file").required(false))
@@ -49,6 +57,9 @@ fn main() {
     }
     if let Some(s) = matches.get_one::<u8>("speed") {
         converter.speed = *s
+    }
+    if let Some(w) = matches.get_one::<u32>("max-width") {
+        converter.max_width = Some(*w)
     }
     let files = matches.get_many::<String>("FILES").unwrap().enumerate();
     let len = files.len();
