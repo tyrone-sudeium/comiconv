@@ -329,7 +329,7 @@ impl Converter {
         pb.finish();
         let mut hasher = Sha256::new();
         hasher.update(&data);
-        if hasher.finalize() != hash.into() {
+        if hasher.finalize() != hash {
             return Err(ConvError::HashMismatch);
         }
         Ok(data)
@@ -409,11 +409,11 @@ impl Converter {
                 .write_with_encoder(JpegEncoder::new_with_quality(&mut data, self.quality))?,
             Format::JpegXL => {
                 let (color, depth) = image_to_zune_colot_type(&image);
-                data = JxlSimpleEncoder::new(
+                JxlSimpleEncoder::new(
                     image.as_bytes(),
                     EncoderOptions::new(image.width() as _, image.height() as _, color, depth),
                 )
-                .encode()
+                .encode(&mut data)
                 .map_err(ConvError::JxlEncodeError)?;
             }
         }
