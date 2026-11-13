@@ -30,6 +30,8 @@ infer = "0.22.0"
 zune-jpegxl = "0.5.2"
 zune-core = "0.5.3"
 libavif = "0.14.0"
+axum = { version = "0.8", features = ["multipart"] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 
 [lib]
 path = "src/lib.rs"
@@ -37,3 +39,7 @@ path = "src/lib.rs"
 [[bin]]
 path = "src/main.rs"
 name = "comiconv"
+
+[[bin]]
+path = "src/web.rs"
+name = "comiconv-web"
