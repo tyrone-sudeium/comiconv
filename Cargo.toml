@@ -32,6 +32,7 @@ zune-core = "0.5.3"
 libavif = "0.14.0"
 axum = { version = "0.8", features = ["multipart"] }
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+zip = "2.4.2"
 
 [lib]
 path = "src/lib.rs"
