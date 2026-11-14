@@ -275,18 +275,105 @@ const PAGE: &str = r#"<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
 <title>comiconv</title>
 <style>
-  body { font-family: system-ui, sans-serif; max-width: 40rem; margin: 3rem auto; padding: 0 1rem; color: #222; }
-  h1 { font-size: 1.6rem; }
-  .column { display: flex; flex-direction: column; align-items: left; gap: .5rem; margin: 1rem 0; }
-  .row { display: flex; gap: 0.5rem; margin: 1rem 0; }
-  button { padding: .4rem 1rem; font-size: 1rem; border: 0; border-radius: .3rem; background: #2563eb; color: white; cursor: pointer; }
-  button:disabled { background: #9ca3af; cursor: default; }
-  select { padding: .4rem .5rem; font-size: 1rem; border: 1px solid #ccc; border-radius: .3rem; background: #fff; }
-  #bar { height: .5rem; background: #e5e7eb; border-radius: .25rem; overflow: hidden; margin-bottom: .5rem; }
-  #fill { height: 100%; width: 0; background: #2563eb; transition: width .1s; }
-  #quality { flex: 1; }
+    :root {
+        --bg: #ffffff;
+        --text: #222222;
+        --primary: #2563eb;
+        --primary-text: #ffffff;
+        --disabled-bg: #9ca3af;
+        --disabled-text: #ffffff;
+        --input-bg: #ffffff;
+        --input-border: #cccccc;
+        --bar-bg: #e5e7eb;
+    }
+
+    @media (prefers-color-scheme: dark) {
+        :root {
+            --bg: #121212;
+            --text: #e5e7eb;
+            --primary: #3b82f6;
+            --primary-text: #ffffff;
+            --disabled-bg: #374151;
+            --disabled-text: #9ca3af;
+            --input-bg: #1f2937;
+            --input-border: #374151;
+            --bar-bg: #374151;
+        }
+    }
+
+    body {
+        font-family: system-ui, sans-serif;
+        max-width: 40rem;
+        margin: 3rem auto;
+        padding: 0 1rem;
+        background: var(--bg);
+        color: var(--text);
+    }
+
+    h1 {
+        font-size: 1.6rem;
+    }
+
+    .column {
+        display: flex;
+        flex-direction: column;
+        align-items: left;
+        gap: .5rem;
+        margin: 1rem 0;
+    }
+
+    .row {
+        display: flex;
+        gap: 0.5rem;
+        margin: 1rem 0;
+    }
+
+    button {
+        padding: .4rem 1rem;
+        font-size: 1rem;
+        border: 0;
+        border-radius: .3rem;
+        background: var(--primary);
+        color: var(--primary-text);
+        cursor: pointer;
+    }
+
+    button:disabled {
+        background: var(--disabled-bg);
+        color: var(--disabled-text);
+        cursor: default;
+    }
+
+    select {
+        padding: .4rem .5rem;
+        font-size: 1rem;
+        border: 1px solid var(--input-border);
+        border-radius: .3rem;
+        background: var(--input-bg);
+        color: var(--text);
+    }
+
+    #bar {
+        height: .5rem;
+        background: var(--bar-bg);
+        border-radius: .25rem;
+        overflow: hidden;
+        margin-bottom: .5rem;
+    }
+
+    #fill {
+        height: 100%;
+        width: 0;
+        background: var(--primary);
+        transition: width .1s;
+    }
+
+    #quality {
+        flex: 1;
+    }
 </style>
 </head>
 <body>
