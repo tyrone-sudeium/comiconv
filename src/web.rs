@@ -148,7 +148,7 @@ async fn convert(
     let converter = Converter {
         format: Format::Avif,
         quiet: true,
-        speed: 6,
+        speed: 9,
         quality,
         ..Default::default()
     };
@@ -325,6 +325,7 @@ go.onclick = () => {
   fill.style.width = '0%';
   const xhr = new XMLHttpRequest();
   xhr.open('POST', '/upload');
+  xhr.responseType = 'blob';
   xhr.upload.onprogress = (e) => {
     if (e.lengthComputable) {
       const pct = Math.round(e.loaded / e.total * 100);
