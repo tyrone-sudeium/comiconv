@@ -503,8 +503,9 @@ mod tests {
         assert_eq!(output_name(Some("comic.zip")), "comic.cbz");
         assert_eq!(output_name(Some("/tmp/my comic (1).cbz")), "my comic (1).cbz");
         assert_eq!(output_name(Some("a/b/c.tar.zip")), "c.tar.cbz");
-        assert_eq!(output_name(Some("weird<name>.zip")), "weird_name_.cbz");
-        assert_eq!(output_name(Some(".zip")), "converted.cbz");
+        assert_eq!(output_name(Some("weird<name>.zip")), "weird<name>.cbz");
+        assert_eq!(output_name(Some("weird<name>.zip")), "weird<name>.cbz");
+        assert_eq!(output_name(Some("[This] {Is A Test}! ♡日本語.cbz")), "[This] {Is A Test}! ♡日本語.cbz");
     }
 
     #[test]
