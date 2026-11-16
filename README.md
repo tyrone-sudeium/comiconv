@@ -15,31 +15,20 @@ Comic book converter written in rust.
 The `comiconv-web` binary runs a small web server that converts uploaded archives to AVIF on demand (max 1 GiB per upload, up to 4 conversions in parallel):
 
 ```sh
-cargo run --bin comiconv-web            # listens on 127.0.0.1:8080
+cargo run --bin comiconv-web              # listens on 127.0.0.1:8080
 cargo run --bin comiconv-web 0.0.0.0:8080
 ```
 
-- `GET /` — upload page with a progress bar
-- `POST /convert` — raw binary body, e.g.
-
-  ```sh
-  curl --data-binary @comic.zip -o comic.cbz http://localhost:8080/convert
-  ```
-
-- `POST /upload` — multipart form data with a field named `file`, e.g.
-
-  ```sh
-  curl -F "file=@comic.zip" -o comic.cbz http://localhost:8080/upload
-  ```
-
-Both endpoints return the archive with every image re-encoded as AVIF, as an `application/x-cbz` attachment named after the uploaded file.
-
-The AVIF quality can be chosen per request: `20` (Very Low), `33` (Low), `50` (High), `60` (Very High) or `auto` (the default). `auto` picks from the upload size: over 200&nbsp;MiB uses 33, over 50&nbsp;MiB uses 50, anything smaller uses 60. Pass it as a form field on `/upload` or as a `?quality=` query parameter on `/convert`:
+Serves a basic upload webpage on `/`, or it can be used from the CLI like:
 
 ```sh
-curl -F "file=@comic.zip" -F "quality=50" -o comic.cbz http://localhost:8080/upload
+# Web-compatible multipart form upload
+curl -F "file=@comic.zip" -F "quality=50" -o comic.cbz "http://localhost:8080/upload"
+# Raw HTTP binary upload/download
 curl --data-binary @comic.zip -o comic.cbz "http://localhost:8080/convert?quality=auto"
 ```
+
+The AVIF quality can be chosen per request: `20` (Very Low), `33` (Low), `50` (High), `60` (Very High) or `auto` (the default). `auto` picks from the upload size: over 200MiB uses 33, over 50MiB uses 50, anything smaller uses 60.
 
 I would strongly recommend not hosting this web server on the public internet, as it is not security hardened and would be trivial to denial-of-service due to the intense resource usage.
 
