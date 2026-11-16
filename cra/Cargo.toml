@@ -1,0 +1,25 @@
+[package]
+name = "cra"
+version = "0.1.5"
+edition = "2024"
+authors = ["Chrontax"]
+description = "Simple library for extracting/archiving in multiple formats fully in memory"
+readme = "README.md"
+homepage = "https://github.com/chrontax/cra"
+repository = "https://github.com/chrontax/cra"
+license = "MIT OR Apache-2.0"
+keywords = ["archive", "extract", "compress"]
+categories = ["encoding"]
+
+[dependencies]
+infer = "0.22.0"
+sevenz-rust = "0.6.0"
+tar = "0.4.40"
+thiserror = "2.0.3"
+zip = "9.6.0"
+
+[target.'cfg(not(target_os = "windows"))'.dependencies]
+uzers = "0.12.0"
+
+[lib]
+path = "src/lib.rs"
