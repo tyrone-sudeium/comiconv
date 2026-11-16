@@ -11,7 +11,7 @@ RUN apt-get update && \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /usr/src/app
 COPY . .
-RUN cargo install --path .
+RUN cargo install --bin comiconv-web --path comiconv
 
 FROM debian:trixie-slim
 COPY --from=builder /usr/local/cargo/bin/comiconv-web /usr/local/bin/comiconv-web
