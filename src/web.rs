@@ -25,6 +25,7 @@ use axum::{
     Router,
 };
 use comiconv::{Converter, Format};
+use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
 use std::sync::Arc;
 use tokio::sync::Semaphore;
 
@@ -156,11 +157,13 @@ async fn convert(
     drop(slot);
     match converted {
         Ok(Ok(out)) => {
+            let raw_filename = output_name(filename.as_deref());
+            let encoded_filename = utf8_percent_encode(&raw_filename, &NON_ALPHANUMERIC);
             let mut headers = HeaderMap::new();
             headers.insert(header::CONTENT_TYPE, "application/x-cbz".parse().unwrap());
             headers.insert(
                 header::CONTENT_DISPOSITION,
-                format!("attachment; filename=\"{}\"", output_name(filename.as_deref()))
+                format!("attachment; filename=\"{}\"", encoded_filename)
                     .parse()
                     .unwrap(),
             );
@@ -250,24 +253,28 @@ fn query_quality(query: &str) -> Option<&str> {
     })
 }
 
-/// Builds the attachment filename: `<sanitized stem>.cbz`.
 fn output_name(filename: Option<&str>) -> String {
     let stem = filename
         .map(|f| f.rsplit(['/', '\\']).next().unwrap_or(f))
         .and_then(|base| base.rsplit_once('.').map(|(stem, _)| stem))
         .filter(|s| !s.is_empty())
         .unwrap_or("converted");
+
     let sanitized: String = stem
         .chars()
-        .map(|c| {
-            if c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '.' | ' ' | '(' | ')') {
-                c
-            } else {
-                '_'
-            }
+        .filter(|c| {
+            !c.is_control() && !matches!(*c, '/' | '\\' | '\0' | '"')
         })
         .collect();
-    format!("{}.cbz", sanitized)
+
+    let sanitized = if sanitized.trim().is_empty() {
+        "converted"
+    } else {
+        &sanitized
+    };
+
+    // No idea why but rust-analyzer specifically gets very mad without using `return format!(...); here`
+    return format!("{}.cbz", sanitized.trim());
 }
 
 const PAGE: &str = r#"<!doctype html>
@@ -380,18 +387,18 @@ const PAGE: &str = r#"<!doctype html>
 <h1>comiconv</h1>
 <p>Upload a <code>.zip</code>/<code>.cbz</code> (max 1&nbsp;GiB) and download the same comic with all images re-encoded as AVIF.</p>
 <div class="column">
-  <input type="file" id="file" accept=".zip,.cbz,application/zip,application/x-zip-compressed">
-  <div class="row">
-    <p>Quality:</p>
-    <select id="quality" title="AVIF quality (Auto picks from the file size)">
-        <option value="auto" selected>Auto</option>
-        <option value="20">Very Low (20)</option>
-        <option value="33">Low (33)</option>
-        <option value="50">High (50)</option>
-        <option value="60">Very High (60)</option>
-    </select>
-  </div>
-  <button id="go" disabled>Convert</button>
+    <input type="file" id="file" accept=".zip,.cbz,application/zip,application/x-zip-compressed">
+    <div class="row">
+        <p>Quality:</p>
+        <select id="quality" title="AVIF quality (Auto picks from the file size)">
+            <option value="auto" selected>Auto</option>
+            <option value="20">Very Low (20)</option>
+            <option value="33">Low (33)</option>
+            <option value="50">High (50)</option>
+            <option value="60">Very High (60)</option>
+        </select>
+    </div>
+    <button id="go" disabled>Convert</button>
 </div>
 <div id="bar"><div id="fill"></div></div>
 <p id="status">&nbsp;</p>
@@ -403,40 +410,46 @@ const fill = document.getElementById('fill');
 
 file.onchange = () => { go.disabled = !file.files.length; };
 go.onclick = () => {
-  if (!file.files.length) return;
-  const fd = new FormData();
-  fd.append('file', file.files[0]);
-  fd.append('quality', document.getElementById('quality').value);
-  go.disabled = true;
-  status.textContent = 'Uploading\u2026';
-  fill.style.width = '0%';
-  const xhr = new XMLHttpRequest();
-  xhr.open('POST', '/upload');
-  xhr.responseType = 'blob';
-  xhr.upload.onprogress = (e) => {
-    if (e.lengthComputable) {
-      const pct = Math.round(e.loaded / e.total * 100);
-      fill.style.width = pct + '%';
-      status.textContent = 'Uploading\u2026 ' + pct + '%';
-    }
-  };
-  xhr.onload = () => {
-    go.disabled = false;
-    if (xhr.status === 200) {
-      let name = 'converted.cbz';
-      const m = (xhr.getResponseHeader('Content-Disposition') || '').match(/filename="?([^";]+)"?/);
-      if (m) name = m[1];
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(new Blob([xhr.response], { type: 'application/x-cbz' }));
-      a.download = name;
-      a.click();
-      status.textContent = 'Done! Download started.';
-    } else {
-      status.textContent = 'Error: ' + (xhr.responseText || xhr.status);
-    }
-  };
-  xhr.onerror = () => { go.disabled = false; status.textContent = 'Upload failed'; };
-  xhr.send(fd);
+    if (!file.files.length) return;
+    const fd = new FormData();
+    fd.append('file', file.files[0]);
+    fd.append('quality', document.getElementById('quality').value);
+    go.disabled = true;
+    status.textContent = 'Uploading\u2026';
+    fill.style.width = '0%';
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', '/upload');
+    xhr.responseType = 'blob';
+    xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) {
+            const pct = Math.round(e.loaded / e.total * 100);
+            fill.style.width = pct + '%';
+            status.textContent = 'Uploading\u2026 ' + pct + '%';
+        }
+    };
+    xhr.onload = () => {
+        go.disabled = false;
+        if (xhr.status === 200) {
+            let name = 'converted.cbz';
+            const m = (xhr.getResponseHeader('Content-Disposition') || '').match(/filename="([^"]+)"/);
+            if (m) {
+                try {
+                    name = decodeURIComponent(m[1]);
+                } catch (e) {
+                    name = m[1];
+                }
+            }
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(new Blob([xhr.response], { type: 'application/x-cbz' }));
+            a.download = name;
+            a.click();
+            status.textContent = 'Done! Download started.';
+        } else {
+            status.textContent = 'Error: ' + (xhr.responseText || xhr.status);
+        }
+    };
+    xhr.onerror = () => { go.disabled = false; status.textContent = 'Upload failed'; };
+    xhr.send(fd);
 };
 </script>
 </body>
